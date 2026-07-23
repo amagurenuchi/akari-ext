@@ -1,4 +1,5 @@
 use std::collections::HashMap; 
+extern crate self as akari; 
 
 #[cfg(feature = "object_macro")] 
 use crate::object;

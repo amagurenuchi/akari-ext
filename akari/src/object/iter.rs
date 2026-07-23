@@ -145,7 +145,7 @@ impl<'a> Iterator for IterBorrowed<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.source {
-            Value::Boolean(_) | Value::Numerical(_) | Value::Str(_) => {
+            Value::Boolean(_) | Value::Numerical(_) | Value::Fraction(_) | Value::Str(_) => {
                 if self.pos == 0 {
                     self.pos += 1; // Mark as done
                     Some(KVP::Borrowed {
@@ -200,7 +200,7 @@ impl Iterator for IterOwned {
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.source {
-            Value::Boolean(_) | Value::Numerical(_) | Value::Str(_) => {
+            Value::Boolean(_) | Value::Numerical(_) | Value::Fraction(_) | Value::Str(_) => {
                 if self.pos == 0 {
                     self.pos += 1; // Mark as done
                     Some(KVP::Owned {
