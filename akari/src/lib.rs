@@ -31,18 +31,16 @@ mod object;
 pub use object::*;
 
 #[cfg(feature = "template")]
-mod template; 
-#[cfg(feature = "template")]
-pub use template::parse::{Token, tokenize};
+mod template;
 #[cfg(feature = "template")]
 pub use template::compile::compile;
 #[cfg(feature = "template")]
-pub use template::template_manager::TemplateManager; 
+pub use template::parse::{Token, tokenize};
+#[cfg(feature = "template")]
+pub use template::template_manager::TemplateManager;
 
 #[cfg(feature = "object_macro")]
-pub use akari_macro::object; 
+pub use akari_macro::object;
 
 #[cfg(any(feature = "extension"))]
-pub mod extensions; 
-
-
+pub mod extensions;

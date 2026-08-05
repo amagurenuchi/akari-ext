@@ -41,10 +41,6 @@ impl JsonSerializer {
                 writer.write_str(&n.to_string());
                 Ok(())
             }
-            Value::Fraction(f) => {
-                writer.write_str(&f.to_string());
-                Ok(())
-            }
             Value::Str(s) => serialize_string(writer, s),
             Value::List(items) => {
                 if depth >= Self::MAX_DEPTH {

@@ -14,7 +14,6 @@
 ///
 /// Run this with:
 ///   cargo test --test fraction_basics
-
 use akari::Fraction;
 
 // ─────────────────────────────────────────────────────────────────
@@ -26,7 +25,7 @@ use akari::Fraction;
 #[test]
 fn test_fraction_construction_and_reduction() {
     // Direct construction – always reduces to lowest terms
-    let half   = Fraction::new(1, 2);
+    let half = Fraction::new(1, 2);
     let four_eighths = Fraction::new(4, 8); // same as 1/2
 
     assert_eq!(half.numer(), 1);
@@ -37,17 +36,17 @@ fn test_fraction_construction_and_reduction() {
     let f = Fraction::new(6, 9);
     assert_eq!(f.numer(), 2);
     assert_eq!(f.denom(), 3);
-    println!("6/9 reduced = {}", f);    // prints "2/3"
+    println!("6/9 reduced = {}", f); // prints "2/3"
 
     // A negative fraction keeps the sign on the numerator, denominator stays > 0
     let neg = Fraction::new(-3, 6);
     assert_eq!(neg.numer(), -1);
     assert_eq!(neg.denom(), 2);
-    println!("-3/6 reduced = {}", neg);  // prints "-1/2"
+    println!("-3/6 reduced = {}", neg); // prints "-1/2"
 
     // Constructing from an integer
     let three = Fraction::from_integer(3);
-    assert!(three.is_integer());         // denominator is 1
+    assert!(three.is_integer()); // denominator is 1
     println!("integer 3 as fraction = {}", three); // prints "3"
 
     // Constructing from a tuple
@@ -56,12 +55,12 @@ fn test_fraction_construction_and_reduction() {
     println!("(7,4) as fraction = {}", from_tuple); // prints "7/4"
 }
 
-/// Division by zero is silently handled: Fraction::new(x, 0) → 0/1.
+/// Division by zero is now a caller choice: use the fallible constructor
+/// when you want to handle it explicitly.
 #[test]
 fn test_fraction_zero_denominator() {
-    let bad = Fraction::new(5, 0);
-    assert_eq!(bad, Fraction::new(0, 1), "division by zero should yield 0/1");
-    println!("5/0 → {}", bad); // prints "0"
+    assert_eq!(Fraction::try_new(5, 0), None);
+    assert_eq!(Fraction::try_new(5, 2), Some(Fraction::new(5, 2)));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -73,20 +72,20 @@ fn test_fraction_zero_denominator() {
 fn test_fraction_addition() {
     let a = Fraction::new(1, 2); // 1/2
     let b = Fraction::new(1, 3); // 1/3
-    let sum = a + b;             // 1/2 + 1/3 = 5/6
+    let sum = a + b; // 1/2 + 1/3 = 5/6
 
     assert_eq!(sum, Fraction::new(5, 6));
     println!("{} + {} = {}", a, b, sum); // 1/2 + 1/3 = 5/6
 
     // Adding to an integer fraction
-    let whole  = Fraction::new(2, 1); // 2
-    let result = whole + b;           // 2 + 1/3 = 7/3
+    let whole = Fraction::new(2, 1); // 2
+    let result = whole + b; // 2 + 1/3 = 7/3
     assert_eq!(result, Fraction::new(7, 3));
     println!("{} + {} = {}", whole, b, result); // 2 + 1/3 = 7/3
 
     // Compound assignment +=
     let mut acc = Fraction::new(1, 4); // 1/4
-    acc += Fraction::new(3, 4);        // 1/4 + 3/4 = 1
+    acc += Fraction::new(3, 4); // 1/4 + 3/4 = 1
     assert!(acc.is_integer());
     assert_eq!(acc.numer(), 1);
     println!("1/4 += 3/4 = {}", acc); // "1"
@@ -196,7 +195,10 @@ fn test_fraction_ordering() {
     fracs.sort();
     assert_eq!(fracs[0], Fraction::new(1, 4));
     assert_eq!(fracs[3], Fraction::new(5, 6));
-    println!("sorted: {:?}", fracs.iter().map(|f| f.to_string()).collect::<Vec<_>>());
+    println!(
+        "sorted: {:?}",
+        fracs.iter().map(|f| f.to_string()).collect::<Vec<_>>()
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -233,8 +235,8 @@ fn test_fraction_conversion() {
     println!("1/4 as f64 = {}", a.to_f64()); // 0.25
 
     // Display: "n/d" when denom > 1, or just "n" when it's an integer
-    assert_eq!(format!("{}", Fraction::new(3, 5)),  "3/5");
-    assert_eq!(format!("{}", Fraction::new(4, 2)),  "2");   // reduces to 2/1
+    assert_eq!(format!("{}", Fraction::new(3, 5)), "3/5");
+    assert_eq!(format!("{}", Fraction::new(4, 2)), "2"); // reduces to 2/1
     assert_eq!(format!("{}", Fraction::new(-1, 3)), "-1/3");
 
     // From integer primitives
@@ -258,15 +260,30 @@ fn test_fraction_conversion() {
 #[test]
 fn test_from_f64_bounded() {
     // Exact half
-    assert_eq!(Fraction::from_f64_bounded(1.5, 100), Some(Fraction::new(3, 2)));
-    println!("1.5  (max=100) → {:?}", Fraction::from_f64_bounded(1.5, 100));
+    assert_eq!(
+        Fraction::from_f64_bounded(1.5, 100),
+        Some(Fraction::new(3, 2))
+    );
+    println!(
+        "1.5  (max=100) → {:?}",
+        Fraction::from_f64_bounded(1.5, 100)
+    );
 
     // 0.1 representable as 1/10
-    assert_eq!(Fraction::from_f64_bounded(0.1, 100), Some(Fraction::new(1, 10)));
+    assert_eq!(
+        Fraction::from_f64_bounded(0.1, 100),
+        Some(Fraction::new(1, 10))
+    );
 
     // Pi approximation: 22/7 is the best fit with denominator ≤ 10
-    assert_eq!(Fraction::from_f64_bounded(3.14159, 10), Some(Fraction::new(22, 7)));
-    println!("3.14159 (max=10) → {:?}", Fraction::from_f64_bounded(3.14159, 10));
+    assert_eq!(
+        Fraction::from_f64_bounded(3.14159, 10),
+        Some(Fraction::new(22, 7))
+    );
+    println!(
+        "3.14159 (max=10) → {:?}",
+        Fraction::from_f64_bounded(3.14159, 10)
+    );
 
     // Larger cap → closer approximation (355/113 is famous for pi)
     let pi_close = Fraction::from_f64_bounded(std::f64::consts::PI, 1000).unwrap();
@@ -274,12 +291,15 @@ fn test_from_f64_bounded() {
     println!("pi (max=1000) → {}", pi_close); // 355/113
 
     // Whole number
-    assert_eq!(Fraction::from_f64_bounded(5.0, 100), Some(Fraction::new(5, 1)));
+    assert_eq!(
+        Fraction::from_f64_bounded(5.0, 100),
+        Some(Fraction::new(5, 1))
+    );
 
     // NaN and infinity always return None
-    assert_eq!(Fraction::from_f64_bounded(f64::NAN,           100), None);
-    assert_eq!(Fraction::from_f64_bounded(f64::INFINITY,      100), None);
-    assert_eq!(Fraction::from_f64_bounded(f64::NEG_INFINITY,  100), None);
+    assert_eq!(Fraction::from_f64_bounded(f64::NAN, 100), None);
+    assert_eq!(Fraction::from_f64_bounded(f64::INFINITY, 100), None);
+    assert_eq!(Fraction::from_f64_bounded(f64::NEG_INFINITY, 100), None);
 }
 
 /// `from_f64(f)` — same as `from_f64_bounded` with `max_denom = 1_000_000`.
@@ -287,17 +307,17 @@ fn test_from_f64_bounded() {
 #[test]
 fn test_from_f64() {
     // Integer-valued floats
-    assert_eq!(Fraction::from_f64(0.0),  Some(Fraction::new(0, 1)));
-    assert_eq!(Fraction::from_f64(2.0),  Some(Fraction::new(2, 1)));
+    assert_eq!(Fraction::from_f64(0.0), Some(Fraction::new(0, 1)));
+    assert_eq!(Fraction::from_f64(2.0), Some(Fraction::new(2, 1)));
     assert_eq!(Fraction::from_f64(-3.0), Some(Fraction::new(-3, 1)));
 
     // Common decimal fractions
-    assert_eq!(Fraction::from_f64(0.25),  Some(Fraction::new(1, 4)));
-    assert_eq!(Fraction::from_f64(0.5),   Some(Fraction::new(1, 2)));
-    assert_eq!(Fraction::from_f64(0.75),  Some(Fraction::new(3, 4)));
-    assert_eq!(Fraction::from_f64(0.1),   Some(Fraction::new(1, 10)));
-    assert_eq!(Fraction::from_f64(1.5),   Some(Fraction::new(3, 2)));
-    assert_eq!(Fraction::from_f64(1.9),   Some(Fraction::new(19, 10)));
+    assert_eq!(Fraction::from_f64(0.25), Some(Fraction::new(1, 4)));
+    assert_eq!(Fraction::from_f64(0.5), Some(Fraction::new(1, 2)));
+    assert_eq!(Fraction::from_f64(0.75), Some(Fraction::new(3, 4)));
+    assert_eq!(Fraction::from_f64(0.1), Some(Fraction::new(1, 10)));
+    assert_eq!(Fraction::from_f64(1.5), Some(Fraction::new(3, 2)));
+    assert_eq!(Fraction::from_f64(1.9), Some(Fraction::new(19, 10)));
     assert_eq!(Fraction::from_f64(0.125), Some(Fraction::new(1, 8)));
 
     // Repeating decimals: CF finds the clean fraction
@@ -307,7 +327,7 @@ fn test_from_f64() {
     println!("1/7 round-trip: {:?}", Fraction::from_f64(1.0 / 7.0));
 
     // Negative values
-    assert_eq!(Fraction::from_f64(-0.5),  Some(Fraction::new(-1, 2)));
+    assert_eq!(Fraction::from_f64(-0.5), Some(Fraction::new(-1, 2)));
     assert_eq!(Fraction::from_f64(-1.75), Some(Fraction::new(-7, 4)));
 
     // NaN → None
@@ -318,7 +338,13 @@ fn test_from_f64() {
     for &v in vals {
         let frac = Fraction::from_f64(v).expect("should parse");
         let err = (frac.to_f64() - v).abs();
-        assert!(err < 1e-9, "round-trip failed for {}: got {}, err={:.2e}", v, frac, err);
+        assert!(
+            err < 1e-9,
+            "round-trip failed for {}: got {}, err={:.2e}",
+            v,
+            frac,
+            err
+        );
         println!("{} → {} (err = {:.2e})", v, frac, err);
     }
 }
@@ -328,14 +354,26 @@ fn test_from_f64() {
 #[test]
 fn test_from_f64_tol() {
     // 1/3 as float (0.3333333333333333) -> 1/3
-    assert_eq!(Fraction::from_f64_tol(1.0 / 3.0, 0.01), Some(Fraction::new(1, 3)));
-    println!("1/3 (tol=0.01) → {:?}", Fraction::from_f64_tol(1.0 / 3.0, 0.01));
+    assert_eq!(
+        Fraction::from_f64_tol(1.0 / 3.0, 0.01),
+        Some(Fraction::new(1, 3))
+    );
+    println!(
+        "1/3 (tol=0.01) → {:?}",
+        Fraction::from_f64_tol(1.0 / 3.0, 0.01)
+    );
 
     // 0.333 -> 333/1000 exactly
-    assert_eq!(Fraction::from_f64_tol(0.333, 1e-4), Some(Fraction::new(333, 1000)));
+    assert_eq!(
+        Fraction::from_f64_tol(0.333, 1e-4),
+        Some(Fraction::new(333, 1000))
+    );
 
     // Exact float: zero error – passes any tolerance
-    assert_eq!(Fraction::from_f64_tol(0.5, 1e-15), Some(Fraction::new(1, 2)));
+    assert_eq!(
+        Fraction::from_f64_tol(0.5, 1e-15),
+        Some(Fraction::new(1, 2))
+    );
 
     // If tolerance is smaller than the approximation error for a hard float, returns None
     // (e.g. asking for pi/4 to be exact within 1e-15 with only denom≤1e6)
@@ -350,18 +388,21 @@ fn test_from_f64_tol() {
 #[test]
 fn test_approx_f64() {
     // Normal values behave like from_f64
-    assert_eq!(Fraction::approx_f64(1.5),   Fraction::new(3, 2));
-    assert_eq!(Fraction::approx_f64(0.1),   Fraction::new(1, 10));
-    assert_eq!(Fraction::approx_f64(0.25),  Fraction::new(1, 4));
-    assert_eq!(Fraction::approx_f64(3.0),   Fraction::new(3, 1));
+    assert_eq!(Fraction::approx_f64(1.5), Fraction::new(3, 2));
+    assert_eq!(Fraction::approx_f64(0.1), Fraction::new(1, 10));
+    assert_eq!(Fraction::approx_f64(0.25), Fraction::new(1, 4));
+    assert_eq!(Fraction::approx_f64(3.0), Fraction::new(3, 1));
 
     // Negative
-    assert_eq!(Fraction::approx_f64(-1.5),  Fraction::new(-3, 2));
+    assert_eq!(Fraction::approx_f64(-1.5), Fraction::new(-3, 2));
     assert_eq!(Fraction::approx_f64(-0.25), Fraction::new(-1, 4));
 
     // NaN fallback: `f64::NAN as i64` is 0 on most platforms → 0/1
     let nan_result = Fraction::approx_f64(f64::NAN);
-    println!("approx_f64(NaN) = {} (fallback to integer truncation)", nan_result);
+    println!(
+        "approx_f64(NaN) = {} (fallback to integer truncation)",
+        nan_result
+    );
 
     // Verify it never panics for any value, including edge cases
     let _ = Fraction::approx_f64(f64::MAX);

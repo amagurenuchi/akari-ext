@@ -1,5 +1,7 @@
 use core::fmt;
-use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
+use core::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 
 /// Helper function to compute Greatest Common Divisor (GCD) using Euclidean algorithm.
 fn gcd(mut a: i64, mut b: i64) -> i64 {
@@ -24,10 +26,21 @@ pub struct Fraction {
 }
 
 impl Fraction {
+    /// Default denominator cap for continued-fraction approximation.
+    ///
+    /// This keeps decimal-to-fraction conversion precise for common inputs
+    /// while still bounding the search cost.
+    pub const DEFAULT_MAX_DENOM: i64 = 1_000_000;
+
     /// Creates a new `Fraction` reduced to lowest terms.
     pub fn new(numer: i64, denom: i64) -> Self {
+        Self::try_new(numer, denom).expect("Fraction::new requires a non-zero denominator")
+    }
+
+    /// Fallible constructor that returns `None` when the denominator is zero.
+    pub fn try_new(numer: i64, denom: i64) -> Option<Self> {
         if denom == 0 {
-            return Self { numer: 0, denom: 1 };
+            return None;
         }
         let g = gcd(numer, denom);
         let mut n = numer / g;
@@ -36,7 +49,7 @@ impl Fraction {
             n = -n;
             d = -d;
         }
-        Self { numer: n, denom: d }
+        Some(Self { numer: n, denom: d })
     }
 
     /// Creates a fraction from an integer `n / 1`.
@@ -96,8 +109,10 @@ impl Fraction {
         //   a_n = floor(rem)
         //   h_n = a_n * h_{n-1} + h_{n-2}
         //   k_n = a_n * k_{n-1} + k_{n-2}
-        let mut h_prev: i64 = 0; let mut h_curr: i64 = 1;
-        let mut k_prev: i64 = 1; let mut k_curr: i64 = 0;
+        let mut h_prev: i64 = 0;
+        let mut h_curr: i64 = 1;
+        let mut k_prev: i64 = 1;
+        let mut k_curr: i64 = 0;
         let mut rem = x;
 
         loop {
@@ -109,8 +124,10 @@ impl Fraction {
                 break;
             }
 
-            h_prev = h_curr; h_curr = h_next;
-            k_prev = k_curr; k_curr = k_next;
+            h_prev = h_curr;
+            h_curr = h_next;
+            k_prev = k_curr;
+            k_curr = k_next;
 
             let frac_part = rem - a as f64;
             if frac_part < 1e-12 {
@@ -139,7 +156,7 @@ impl Fraction {
     /// assert_eq!(Fraction::from_f64(1.0 / 3.0), Some(Fraction::new(1, 3)));
     /// ```
     pub fn from_f64(f: f64) -> Option<Self> {
-        Self::from_f64_bounded(f, 1_000_000)
+        Self::from_f64_bounded(f, Self::DEFAULT_MAX_DENOM)
     }
 
     /// Converts an `f64` to the best rational approximation whose error is ≤ `tolerance`.
@@ -180,14 +197,20 @@ impl Fraction {
 
     /// Checked addition. Returns `None` on overflow or divide-by-zero.
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
-        let n = self.numer.checked_mul(rhs.denom)?.checked_add(rhs.numer.checked_mul(self.denom)?)?;
+        let n = self
+            .numer
+            .checked_mul(rhs.denom)?
+            .checked_add(rhs.numer.checked_mul(self.denom)?)?;
         let d = self.denom.checked_mul(rhs.denom)?;
         Some(Self::new(n, d))
     }
 
     /// Checked subtraction.
     pub fn checked_sub(self, rhs: Self) -> Option<Self> {
-        let n = self.numer.checked_mul(rhs.denom)?.checked_sub(rhs.numer.checked_mul(self.denom)?)?;
+        let n = self
+            .numer
+            .checked_mul(rhs.denom)?
+            .checked_sub(rhs.numer.checked_mul(self.denom)?)?;
         let d = self.denom.checked_mul(rhs.denom)?;
         Some(Self::new(n, d))
     }
