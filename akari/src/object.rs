@@ -8,6 +8,7 @@ mod iter;
 mod test;
 
 pub use value::Value;
+pub use value::Fraction;
 // pub use node::Node;
 pub use error::ValueError;
 pub use iter::{IterBorrowed, IterOwned, KVP};

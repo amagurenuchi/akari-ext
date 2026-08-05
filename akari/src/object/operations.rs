@@ -4,7 +4,7 @@ use crate::hash::HashMap;
 use super::error::ValueError;
 use super::value::float::FloatExt;
 use core::ops::{Index, Range, RangeFrom, RangeTo, RangeFull};
-use super::value::Value; 
+use super::value::{Value, Fraction}; 
 
 // Existing Value enum and implementations...
 
@@ -43,6 +43,13 @@ impl Value {
         match (self, rhs) {
             // Numerical + Numerical
             (Value::Numerical(a), Value::Numerical(b)) => Value::Numerical(a + b),
+            
+            // Fraction operations
+            (Value::Fraction(a), Value::Fraction(b)) => Value::Fraction(*a + *b),
+            (Value::Fraction(a), Value::Numerical(b)) => Value::Fraction(*a + Fraction::approx_f64(*b)),
+            (Value::Numerical(a), Value::Fraction(b)) => Value::Fraction(Fraction::approx_f64(*a) + *b),
+            (Value::Fraction(a), Value::Boolean(b)) => Value::Fraction(*a + Fraction::from(if *b { 1 } else { 0 })),
+            (Value::Boolean(a), Value::Fraction(b)) => Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) + *b),
             
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => Value::Numerical((*a as i64 + *b as i64) as f64),
@@ -113,6 +120,13 @@ impl Value {
         match (self, rhs) {
             // Numerical + Numerical
             (Value::Numerical(a), Value::Numerical(b)) => Ok(Value::Numerical(a + b)),
+            
+            // Fraction operations
+            (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(*a + *b)),
+            (Value::Fraction(a), Value::Numerical(b)) => Ok(Value::Fraction(*a + Fraction::approx_f64(*b))),
+            (Value::Numerical(a), Value::Fraction(b)) => Ok(Value::Fraction(Fraction::approx_f64(*a) + *b)),
+            (Value::Fraction(a), Value::Boolean(b)) => Ok(Value::Fraction(*a + Fraction::from(if *b { 1 } else { 0 }))),
+            (Value::Boolean(a), Value::Fraction(b)) => Ok(Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) + *b)),
             
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Numerical((*a as i64 + *b as i64) as f64)),
@@ -310,6 +324,13 @@ impl Value {
             // Numerical - Numerical
             (Value::Numerical(a), Value::Numerical(b)) => Value::Numerical(a - b),
             
+            // Fraction subtraction
+            (Value::Fraction(a), Value::Fraction(b)) => Value::Fraction(*a - *b),
+            (Value::Fraction(a), Value::Numerical(b)) => Value::Fraction(*a - Fraction::approx_f64(*b)),
+            (Value::Numerical(a), Value::Fraction(b)) => Value::Fraction(Fraction::approx_f64(*a) - *b),
+            (Value::Fraction(a), Value::Boolean(b)) => Value::Fraction(*a - Fraction::from(if *b { 1 } else { 0 })),
+            (Value::Boolean(a), Value::Fraction(b)) => Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) - *b),
+            
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => Value::Numerical((*a as i64 - *b as i64) as f64),
             (Value::Numerical(a), Value::Boolean(b)) => Value::Numerical(a - *b as i64 as f64),
@@ -354,6 +375,13 @@ impl Value {
         match (self, rhs) {
             // Numerical - Numerical
             (Value::Numerical(a), Value::Numerical(b)) => Ok(Value::Numerical(a - b)),
+            
+            // Fraction subtraction
+            (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(*a - *b)),
+            (Value::Fraction(a), Value::Numerical(b)) => Ok(Value::Fraction(*a - Fraction::approx_f64(*b))),
+            (Value::Numerical(a), Value::Fraction(b)) => Ok(Value::Fraction(Fraction::approx_f64(*a) - *b)),
+            (Value::Fraction(a), Value::Boolean(b)) => Ok(Value::Fraction(*a - Fraction::from(if *b { 1 } else { 0 }))),
+            (Value::Boolean(a), Value::Fraction(b)) => Ok(Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) - *b)),
             
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Numerical((*a as i64 - *b as i64) as f64)),
@@ -477,6 +505,13 @@ impl Value {
             // Numerical * Numerical
             (Value::Numerical(a), Value::Numerical(b)) => Value::Numerical(a * b),
             
+            // Fraction multiplication
+            (Value::Fraction(a), Value::Fraction(b)) => Value::Fraction(*a * *b),
+            (Value::Fraction(a), Value::Numerical(b)) => Value::Fraction(*a * Fraction::approx_f64(*b)),
+            (Value::Numerical(a), Value::Fraction(b)) => Value::Fraction(Fraction::approx_f64(*a) * *b),
+            (Value::Fraction(a), Value::Boolean(b)) => Value::Fraction(*a * Fraction::from(if *b { 1 } else { 0 })),
+            (Value::Boolean(a), Value::Fraction(b)) => Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) * *b),
+            
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => Value::Numerical((*a as i64 * *b as i64) as f64),
             (Value::Numerical(a), Value::Boolean(b)) => Value::Numerical(a * *b as i64 as f64),
@@ -580,6 +615,13 @@ impl Value {
         match (self, rhs) {
             // Numerical * Numerical
             (Value::Numerical(a), Value::Numerical(b)) => Ok(Value::Numerical(a * b)),
+            
+            // Fraction multiplication
+            (Value::Fraction(a), Value::Fraction(b)) => Ok(Value::Fraction(*a * *b)),
+            (Value::Fraction(a), Value::Numerical(b)) => Ok(Value::Fraction(*a * Fraction::approx_f64(*b))),
+            (Value::Numerical(a), Value::Fraction(b)) => Ok(Value::Fraction(Fraction::approx_f64(*a) * *b)),
+            (Value::Fraction(a), Value::Boolean(b)) => Ok(Value::Fraction(*a * Fraction::from(if *b { 1 } else { 0 }))),
+            (Value::Boolean(a), Value::Fraction(b)) => Ok(Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) * *b)),
             
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => Ok(Value::Numerical((*a as i64 * *b as i64) as f64)),
@@ -762,6 +804,44 @@ impl Value {
                 }
             },
             
+            // Fraction / Fraction
+            (Value::Fraction(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Value::None
+                } else {
+                    Value::Fraction(*a / *b)
+                }
+            },
+            (Value::Fraction(a), Value::Numerical(b)) => {
+                let bf = Fraction::approx_f64(*b);
+                if bf.numer() == 0 {
+                    Value::None
+                } else {
+                    Value::Fraction(*a / bf)
+                }
+            },
+            (Value::Numerical(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Value::None
+                } else {
+                    Value::Fraction(Fraction::approx_f64(*a) / *b)
+                }
+            },
+            (Value::Fraction(a), Value::Boolean(b)) => {
+                if !*b {
+                    Value::None
+                } else {
+                    Value::Fraction(*a)
+                }
+            },
+            (Value::Boolean(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Value::None
+                } else {
+                    Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) / *b)
+                }
+            },
+            
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => {
                 if !*b {
@@ -874,6 +954,44 @@ impl Value {
                     Err(ValueError::DivisionByZeroError)
                 } else {
                     Ok(Value::Numerical(a / b))
+                }
+            },
+            
+            // Fraction / Fraction
+            (Value::Fraction(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(*a / *b))
+                }
+            },
+            (Value::Fraction(a), Value::Numerical(b)) => {
+                let bf = Fraction::approx_f64(*b);
+                if bf.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(*a / bf))
+                }
+            },
+            (Value::Numerical(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(Fraction::approx_f64(*a) / *b))
+                }
+            },
+            (Value::Fraction(a), Value::Boolean(b)) => {
+                if !*b {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(*a))
+                }
+            },
+            (Value::Boolean(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(Fraction::from(if *a { 1 } else { 0 }) / *b))
                 }
             },
             
@@ -1063,9 +1181,32 @@ impl Value {
                 if *b == 0.0 {
                     Value::None
                 } else {
-                    // Follow Python's modulo behavior: a % b = a - b * floor(a / b)
                     let result = a - b * (a / b).floor2();
                     Value::Numerical(result)
+                }
+            },
+            
+            // Fraction % Fraction
+            (Value::Fraction(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Value::None
+                } else {
+                    Value::Fraction(*a % *b)
+                }
+            },
+            (Value::Fraction(a), Value::Numerical(b)) => {
+                let bf = Fraction::approx_f64(*b);
+                if bf.numer() == 0 {
+                    Value::None
+                } else {
+                    Value::Fraction(*a % bf)
+                }
+            },
+            (Value::Numerical(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Value::None
+                } else {
+                    Value::Fraction(Fraction::approx_f64(*a) % *b)
                 }
             },
             
@@ -1154,8 +1295,47 @@ impl Value {
                 }
             },
             
+            // Fraction % Fraction / Numerical / Boolean
+            (Value::Fraction(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(*a % *b))
+                }
+            },
+            (Value::Fraction(a), Value::Numerical(b)) => {
+                let bf = Fraction::approx_f64(*b);
+                if bf.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(*a % bf))
+                }
+            },
+            (Value::Numerical(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(Fraction::approx_f64(*a) % *b))
+                }
+            },
+            (Value::Fraction(a), Value::Boolean(b)) => {
+                if !*b {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(*a % Fraction::new(1, 1)))
+                }
+            },
+            (Value::Boolean(a), Value::Fraction(b)) => {
+                if b.numer() == 0 {
+                    Err(ValueError::DivisionByZeroError)
+                } else {
+                    Ok(Value::Fraction(Fraction::from(if *a { 1_i64 } else { 0_i64 }) % *b))
+                }
+            },
+
             // Boolean conversions
             (Value::Boolean(a), Value::Boolean(b)) => {
+
                 if !*b {
                     Err(ValueError::DivisionByZeroError)
                 } else {

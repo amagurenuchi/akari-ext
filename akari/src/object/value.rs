@@ -4,6 +4,9 @@ use crate::hash::HashMap;
 use core::hash::{Hash, Hasher};
 
 pub mod float;
+pub mod fraction;
+
+pub use fraction::Fraction;
 
 #[cfg(not(feature = "no_std"))]
 use std::fs::{self, File};
@@ -13,6 +16,7 @@ use super::error::ValueError;
 #[derive(Debug, Clone)]
 pub enum Value {
     Numerical(f64),
+    Fraction(Fraction),
     Boolean(bool), 
     Str(String),
     List(Vec<Value>),
@@ -55,6 +59,7 @@ impl Value {
     pub fn type_of(&self) -> String {
         match self {
             Value::Numerical(_) => "num".to_string(),
+            Value::Fraction(_) => "frac".to_string(),
             Value::Boolean(_) => "bool".to_string(),
             Value::Str(_) => "str".to_string(),
             Value::List(_) => "vec".to_string(),
@@ -72,6 +77,16 @@ impl Value {
     pub fn new_numerical() -> Self { 
         return Self::Numerical(0f64) 
     } 
+
+    /// Creates a default fraction value, aka 0/1
+    pub fn new_fraction() -> Self {
+        return Self::Fraction(Fraction::default())
+    }
+
+    /// Creates a fraction value from numerator and denominator
+    pub fn fraction_of(numer: i64, denom: i64) -> Self {
+        return Self::Fraction(Fraction::new(numer, denom))
+    }
 
     /// Creates a default boolean value, aka True 
     /// No parameters needed to be pass in 
@@ -121,12 +136,124 @@ impl Value {
     pub fn numerical(&self) -> f64 {
         match self {
             Value::Numerical(n) => *n,
+            Value::Fraction(f) => f.to_f64(),
             Value::Boolean(b) => if *b { 1.0 } else { 0.0 },
             Value::Str(s) => s.parse::<f64>().unwrap_or(0.0),
             Value::List(l) => l.len() as f64,
             Value::Dict(d) => d.len() as f64,
             Value::None => 0.0, 
         }
+    } 
+
+    /// Converts the Value into a Fraction.
+    /// Non-fallible method returning Fraction::default() (0/1) on failure.
+    pub fn fraction(&self) -> Fraction {
+        self.as_fraction()
+    }
+
+    /// Non-fallible conversion to Fraction with default (0/1).
+    pub fn as_fraction(&self) -> Fraction {
+        match self {
+            Value::Fraction(f) => *f,
+            Value::Numerical(n) => Fraction::approx_f64(*n),
+            Value::Boolean(b) => Fraction::new(if *b { 1 } else { 0 }, 1),
+            Value::Str(s) => {
+                if let Some((num_str, den_str)) = s.split_once('/') {
+                    if let (Ok(num), Ok(den)) = (num_str.trim().parse::<i64>(), den_str.trim().parse::<i64>()) {
+                        return Fraction::new(num, den);
+                    }
+                }
+                Fraction::new(s.parse::<i64>().unwrap_or(0), 1)
+            }
+            Value::List(l) => Fraction::new(l.len() as i64, 1),
+            Value::Dict(d) => Fraction::new(d.len() as i64, 1),
+            Value::None => Fraction::default(),
+        }
+    }
+
+    /// Non-fallible conversion with explicit fallback fraction.
+    pub fn as_fraction_or(&self, default: Fraction) -> Fraction {
+        match self {
+            Value::Fraction(f) => *f,
+            Value::Numerical(n) => Fraction::approx_f64(*n),
+            Value::Boolean(b) => Fraction::new(if *b { 1 } else { 0 }, 1),
+            Value::Str(s) => {
+                if let Some((num_str, den_str)) = s.split_once('/') {
+                    if let (Ok(num), Ok(den)) = (num_str.trim().parse::<i64>(), den_str.trim().parse::<i64>()) {
+                        return Fraction::new(num, den);
+                    }
+                }
+                if let Ok(n) = s.parse::<i64>() {
+                    Fraction::new(n, 1)
+                } else {
+                    default
+                }
+            }
+            _ => default,
+        }
+    }
+
+    /// Fallible conversion returning Result<Fraction, ValueError>.
+    pub fn try_as_fraction(&self) -> Result<Fraction, ValueError> {
+        match self {
+            Value::Fraction(f) => Ok(*f),
+            Value::Numerical(n) => Ok(Fraction::approx_f64(*n)),
+            Value::Boolean(b) => Ok(Fraction::new(if *b { 1 } else { 0 }, 1)),
+            Value::Str(s) => {
+                if let Some((num_str, den_str)) = s.split_once('/') {
+                    if let (Ok(num), Ok(den)) = (num_str.trim().parse::<i64>(), den_str.trim().parse::<i64>()) {
+                        return Ok(Fraction::new(num, den));
+                    }
+                }
+                s.parse::<i64>()
+                    .map(|n| Fraction::new(n, 1))
+                    .map_err(|_| ValueError::TypeError)
+            }
+            _ => Err(ValueError::TypeError),
+        }
+    }
+
+    /// Conversion that panics on failure.
+    pub fn as_fraction_unchecked(&self) -> Fraction {
+        self.try_as_fraction().expect("Failed to convert value to fraction")
+    }
+
+    /// Converts a `Value::Numerical` or `Value::Boolean` to `Value::Fraction` using the
+    /// continued-fraction algorithm. Non-Numerical / non-Boolean values are returned unchanged.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use akari::{Value, Fraction};
+    /// let v = Value::Numerical(1.5);
+    /// assert_eq!(v.to_fraction(), Value::Fraction(Fraction::new(3, 2)));
+    /// let f = Value::Fraction(Fraction::new(1, 3));
+    /// assert_eq!(f.to_fraction(), f); // already a fraction, unchanged
+    /// ```
+    pub fn to_fraction(&self) -> Value {
+        match self {
+            Value::Numerical(n) => {
+                Value::Fraction(Fraction::approx_f64(*n))
+            }
+            Value::Boolean(b) => {
+                Value::Fraction(Fraction::new(if *b { 1 } else { 0 }, 1))
+            }
+            other => other.clone(),
+        }
+    }
+
+    /// Fallible version of [`to_fraction`](Self::to_fraction).
+    /// Returns `Err(ValueError::TypeError)` for types that cannot be meaningfully
+    /// expressed as a fraction (lists, dicts, `None`, un-parseable strings).
+    ///
+    /// For strings it accepts `"n/d"` and `"n"` formats.
+    pub fn try_to_fraction(&self) -> Result<Value, ValueError> {
+        self.try_as_fraction().map(Value::Fraction)
+    }
+
+
+    /// Checks if the Value is a Fraction.
+    pub fn is_fraction(&self) -> bool {
+        matches!(self, Value::Fraction(_))
     } 
 
     /// Checks if the Value is a numerical value. 
@@ -255,6 +382,7 @@ impl Value {
     pub fn integer(&self) -> i64 {
         match self {
             Value::Numerical(n) => *n as i64,
+            Value::Fraction(f) => f.numer() / f.denom(),
             Value::Boolean(b) => if *b { 1 } else { 0 },
             Value::Str(s) => s.parse::<i64>().unwrap_or(0),
             Value::List(l) => l.len() as i64,
@@ -267,6 +395,7 @@ impl Value {
     pub fn boolean(&self) -> bool {
         match self {
             Value::Numerical(n) => *n != 0.0,
+            Value::Fraction(f) => f.numer() != 0,
             Value::Boolean(b) => *b,
             Value::Str(s) => !s.is_empty(),
             Value::List(l) => !l.is_empty(),
@@ -1083,6 +1212,9 @@ impl Value {
     pub fn equals(&self, other: &Value) -> bool {
         match (self, other) {
             (Value::Numerical(n1), Value::Numerical(n2)) => n1 == n2,
+            (Value::Fraction(f1), Value::Fraction(f2)) => f1 == f2,
+            (Value::Fraction(f1), Value::Numerical(n2)) => f1.to_f64() == *n2,
+            (Value::Numerical(n1), Value::Fraction(f2)) => *n1 == f2.to_f64(),
             (Value::Boolean(b1), Value::Boolean(b2)) => b1 == b2,
             (Value::Str(s1), Value::Str(s2)) => s1 == s2,
             (Value::List(l1), Value::List(l2)) => l1 == l2,
@@ -1132,6 +1264,7 @@ impl Value {
         match self {
             Value::Str(s) => s.clone(),
             Value::Numerical(n) => n.to_string(),
+            Value::Fraction(f) => f.to_string(),
             Value::Boolean(b) => b.to_string(),
             _ => "".to_string(),
         }
@@ -1182,6 +1315,7 @@ impl Value {
         match self {
             Value::None => "null".to_string(),
             Value::Numerical(n) => format!("{}", n),
+            Value::Fraction(f) => format!("{}", f),
             Value::Boolean(b) => format!("{}", b),
             Value::Str(_) => format!("{}", self.string_repr_safely()), 
             Value::List(l) => {
@@ -1229,6 +1363,10 @@ impl Hash for Value {
                 // Convert f64 to a bitwise representation for hashing
                 n.to_bits().hash(state);
             },
+            Value::Fraction(f) => {
+                5.hash(state);
+                f.hash(state);
+            },
             Value::Str(s) => {
                 2.hash(state);
                 s.hash(state);
@@ -1242,6 +1380,8 @@ impl Hash for Value {
                 }
             },
             Value::Dict(dict) => {
+                // Note: This means dictionaries with the same length but different contents
+                // will have the same hash, which is not ideal but prevents infinite recursion
                 4.hash(state);
                 // For dictionaries, hash the number of entries
                 // We can't reliably hash the entries themselves as HashMap doesn't implement Hash
@@ -1280,6 +1420,8 @@ impl From<f32> for Value { fn from(n: f32) -> Self { Value::Numerical(n as f64) 
 impl From<f64> for Value { fn from(n: f64) -> Self { Value::Numerical(n) } }
 impl From<char> for Value { fn from(c: char) -> Self { Value::Str(c.to_string()) } }
 impl From<bool> for Value { fn from(b: bool) -> Self { Value::Boolean(b) } }
+impl From<Fraction> for Value { fn from(f: Fraction) -> Self { Value::Fraction(f) } }
+impl From<(i64, i64)> for Value { fn from(p: (i64, i64)) -> Self { Value::Fraction(Fraction::from(p)) } }
 impl From<&str> for Value { fn from(s: &str) -> Self { Value::Str(s.to_string()) } }
 impl From<String> for Value { fn from(s: String) -> Self { Value::Str(s) } }
 impl From<&String> for Value { fn from(s: &String) -> Self { Value::Str(s.clone()) } } 
