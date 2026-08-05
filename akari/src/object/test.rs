@@ -3,7 +3,7 @@ mod tests {
     use std::collections::HashMap;
     use akari_macro::object; 
     use super::super::value::*; 
-    extern crate self as akari; 
+    use crate as akari; 
 
     #[test] 
     fn new_value(){ 
@@ -17,27 +17,6 @@ mod tests {
         }); 
 
         println!("{}, {}, {}", a, b, dict)
-    }
-
-    #[test]
-    fn test_fraction() {
-        use super::super::value::{Value, Fraction};
-
-        let f1 = Fraction::new(2, 4);
-        assert_eq!(f1.numer(), 1);
-        assert_eq!(f1.denom(), 2);
-
-        let f2 = Fraction::new(1, 3);
-        let f3 = f1 + f2; // 1/2 + 1/3 = 5/6
-        assert_eq!(f3, Fraction::new(5, 6));
-
-        let v1: Value = Fraction::new(1, 2).into();
-        let v2: Value = Fraction::new(1, 3).into();
-        let sum = v1.add(&v2);
-        assert_eq!(sum, Value::Fraction(Fraction::new(5, 6)));
-
-        assert_eq!(v1.type_of(), "frac");
-        assert_eq!(v1.as_fraction(), Fraction::new(1, 2));
     }
 
     #[test] 

@@ -1,7 +1,6 @@
 #![cfg_attr(feature = "no_std", no_std)]
 
 extern crate alloc;
-extern crate self as akari;
 
 /// Re-exports of `alloc` essentials for `no_std` builds. In `std` mode these
 /// are already in the prelude, so the module is omitted entirely.

@@ -744,7 +744,6 @@ impl TemplateCompiler {
                 match expr_value {
                     Obj::Boolean(b) => Ok(b),
                     Obj::Numerical(n) => Ok(n != 0.0),
-                    Obj::Fraction(f) => Ok(f.numer() != 0),
                     Obj::Str(s) => Ok(!s.is_empty()),
                     Obj::List(l) => Ok(!l.is_empty()),
                     Obj::Dict(d) => Ok(!d.is_empty()),
@@ -1107,7 +1106,6 @@ impl TemplateCompiler {
         match value {
             Obj::Boolean(b) => *b,
             Obj::Numerical(n) => *n != 0.0,
-            Obj::Fraction(f) => f.numer() != 0,
             Obj::Str(s) => !s.is_empty(),
             Obj::List(l) => !l.is_empty(),
             Obj::Dict(d) => !d.is_empty(),
