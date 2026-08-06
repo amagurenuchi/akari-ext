@@ -7,8 +7,8 @@ mod parser;
 mod serializer;
 mod test;
 
-pub use value::fraction::Fraction;
 pub use value::Value;
+pub use value::fraction::Fraction;
 // pub use node::Node;
 pub use error::ValueError;
 pub use iter::{IterBorrowed, IterOwned, KVP};

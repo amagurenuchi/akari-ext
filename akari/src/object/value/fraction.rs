@@ -168,8 +168,14 @@ impl Fraction {
     /// # Examples
     /// ```
     /// use akari::Fraction;
-    /// assert_eq!(Fraction::from_f64_tol(0.333, 0.01), Some(Fraction::new(1, 3)));
-    /// assert!(Fraction::from_f64_tol(0.333, 1e-6).is_some()); // 333/1000 is close
+    /// // 0.333 is exactly 333/1000 in floating-point; the CF best approximation
+    /// // is 333/1000, which is within 0.01 of 0.333, so it is returned.
+    /// assert_eq!(Fraction::from_f64_tol(0.333, 0.01), Some(Fraction::new(333, 1000)));
+    /// // Tolerance is still met (333/1000 matches 0.333 exactly in f64)
+    /// assert!(Fraction::from_f64_tol(0.333, 1e-6).is_some());
+    /// // NaN and infinite values always return None
+    /// assert_eq!(Fraction::from_f64_tol(f64::NAN, 1.0), None);
+    /// assert_eq!(Fraction::from_f64_tol(f64::INFINITY, 1.0), None);
     /// ```
     pub fn from_f64_tol(f: f64, tolerance: f64) -> Option<Self> {
         let approx = Self::from_f64(f)?;
