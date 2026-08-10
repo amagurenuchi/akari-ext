@@ -4,7 +4,6 @@ use crate::prelude::*;
 use core::hash::{Hash, Hasher};
 
 pub mod float;
-pub mod fraction;
 
 use super::error::ValueError;
 use super::parser::JsonParser;

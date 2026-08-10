@@ -24,6 +24,8 @@ compile_error!("the `bin` feature requires std and is incompatible with `no_std`
 #[cfg(feature = "hash")]
 pub mod hash;
 
+pub mod fraction;
+
 // Export public APIs
 #[cfg(feature = "dynamic")]
 mod object;
