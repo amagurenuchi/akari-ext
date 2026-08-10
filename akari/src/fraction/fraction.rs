@@ -10,6 +10,9 @@ impl Fraction {
 
     /// Creates a new `Fraction` reduced to lowest terms.
     /// The new function already calls try_new, so it is reduced to its simplest terms from the start.
+    /// By design, the denominator should not be zero. 
+    /// Whatever the end user assigns to the denominator that causes it to be zero is a problem on their side.
+    /// The Checked functions for arithmetic funtions are available for further validation, but might be removed if this zero check is sufficient.
     pub fn new(numer: i64, denom: i64) -> Self {
         Self::try_new(numer, denom).expect("Fraction::new requires a non-zero denominator")
     }
@@ -45,11 +48,13 @@ impl Fraction {
     }
 
     /// Converts the fraction to an `f64` representation.
+    /// Technically it reads as one f64 number after conversion silently anyways.
     pub fn to_f64(&self) -> f64 {
         self.numer as f64 / self.denom as f64
     }
 
     /// Returns true if the fraction is an integer (denominator is 1).
+    /// This runs after the fraction is simplfied.
     pub fn is_integer(&self) -> bool {
         self.denom == 1
     }
@@ -154,6 +159,7 @@ impl Fraction {
     /// assert_eq!(Fraction::from_f64_tol(f64::NAN, 1.0), None);
     /// assert_eq!(Fraction::from_f64_tol(f64::INFINITY, 1.0), None);
     /// ```
+    /// Here lossy conversion is technically okay.
     pub fn from_f64_tol(f: f64, tolerance: f64) -> Option<Self> {
         let approx = Self::from_f64(f)?;
         if (approx.to_f64() - f).abs() <= tolerance {
