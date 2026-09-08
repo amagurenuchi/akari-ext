@@ -15,6 +15,7 @@
 /// Run this with:
 ///   cargo test --test fraction_basics
 use akari::Fraction;
+use core::num::NonZeroU64;
 
 // ─────────────────────────────────────────────────────────────────
 // 1. CONSTRUCTION: How to create a Fraction
@@ -61,6 +62,33 @@ fn test_fraction_construction_and_reduction() {
 fn test_fraction_zero_denominator() {
     assert_eq!(Fraction::try_new(5, 0), None);
     assert_eq!(Fraction::try_new(5, 2), Some(Fraction::new(5, 2)));
+}
+
+/// The representation handles the complete signed-input range without calling
+/// `i64::abs`, and exposes the positive denominator as an unsigned value.
+#[test]
+fn test_fraction_integer_boundaries_and_nonzero_denominator() {
+    let min_numerator = Fraction::new(i64::MIN, 1);
+    assert_eq!(min_numerator.numer(), i64::MIN);
+    assert_eq!(min_numerator.denom(), 1);
+
+    let min_denominator = Fraction::new(1, i64::MIN);
+    assert_eq!(min_denominator.numer(), -1);
+    assert_eq!(min_denominator.denom(), 1_u64 << 63);
+    assert_eq!(
+        min_denominator.denom_nonzero(),
+        NonZeroU64::new(1_u64 << 63).unwrap()
+    );
+
+    // Normalizing i64::MIN / -1 would require the unavailable positive i64 value 2^63.
+    assert_eq!(Fraction::try_new(i64::MIN, -1), None);
+
+    let full_width_denom = Fraction::new_nonzero(1, NonZeroU64::new(u64::MAX).unwrap());
+    assert_eq!(full_width_denom.numer(), 1);
+    assert_eq!(full_width_denom.denom(), u64::MAX);
+
+    let from_tuple: Fraction = (6, NonZeroU64::new(8).unwrap()).into();
+    assert_eq!(from_tuple, Fraction::new(3, 4));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -220,6 +248,17 @@ fn test_checked_operations() {
     let zero = Fraction::new(0, 1);
     assert_eq!(a.checked_div(zero), None);
     println!("checked_div by zero = {:?}", a.checked_div(zero)); // None
+
+    // Intermediates use wider integers, so reducible results do not overflow early.
+    assert_eq!(
+        Fraction::new(i64::MAX, 2).checked_mul(Fraction::new(2, i64::MAX)),
+        Some(Fraction::from_integer(1))
+    );
+
+    assert_eq!(
+        Fraction::from_integer(i64::MAX).checked_add(Fraction::from_integer(1)),
+        None
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -300,6 +339,8 @@ fn test_from_f64_bounded() {
     assert_eq!(Fraction::from_f64_bounded(f64::NAN, 100), None);
     assert_eq!(Fraction::from_f64_bounded(f64::INFINITY, 100), None);
     assert_eq!(Fraction::from_f64_bounded(f64::NEG_INFINITY, 100), None);
+    assert_eq!(Fraction::from_f64_bounded(0.5, 0), None);
+    assert_eq!(Fraction::from_f64_bounded(0.5, -1), None);
 }
 
 /// `from_f64(f)` — same as `from_f64_bounded` with `max_denom = 1_000_000`.
