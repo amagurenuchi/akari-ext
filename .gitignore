@@ -1,6 +1,5 @@
 /target
 /akari/test_temp/*
-INTEGRATION_PLAN.md
 
 # Cargo.lock should not be committed for library crates
 **/Cargo.lock
